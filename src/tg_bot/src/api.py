@@ -7,16 +7,12 @@ from telebot import types
 
 class AbstractApi(abc.ABC):
     @abc.abstractmethod
-    def __init__(self) -> None:
+    def __init__(self, controller_ip: str) -> None:
         logging.debug(f"Инициализация апи")
 
     @abc.abstractmethod
     def start(self, message: types.Message) -> dict:
         logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: start")
-
-    @abc.abstractmethod
-    def text_messages(self, message: types.Message) -> dict:
-        logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: text_messages")
 
     @abc.abstractmethod
     def help(self, message: types.Message) -> dict:
@@ -37,7 +33,7 @@ class AbstractApi(abc.ABC):
 
 class Api(AbstractApi):
     def __init__(self, controller_ip: str) -> None:
-        super().__init__()
+        super().__init__(controller_ip)
         self.__controller_ip: str = controller_ip
 
     def __get_data(self, path: str, message: types.Message, data: dict = None) -> dict:
@@ -49,16 +45,14 @@ class Api(AbstractApi):
         except requests.exceptions.ConnectionError:
             return self.__error_message(message)
 
-        return response.json()
+        try:
+            return response.json()
+        except requests.exceptions.JSONDecodeError:
+            return self.__error_message(message)
 
     def start(self, message: types.Message) -> dict:
         super().start(message)
         path: str = "start"
-        return self.__get_data(path, message)
-
-    def text_messages(self, message: types.Message) -> dict:
-        super().text_messages(message)
-        path: str = "text_messages"
         return self.__get_data(path, message)
 
     def help(self, message: types.Message) -> dict:
@@ -67,9 +61,9 @@ class Api(AbstractApi):
         return self.__get_data(path, message)
 
     def change_cerate_data(self, message: types.Message, login: str, password: str) -> dict:
-        super().change_cerate_data(message)
+        super().change_cerate_data(message, login, password)
         path: str = "change_cerate_data"
-        data: dict = self.__dict_to_json(message.json)
+        data: dict = dict(message.json)
         data["login"] = login
         data["password"] = password
         return self.__get_data(path, message, data)
@@ -89,5 +83,5 @@ class Api(AbstractApi):
         return {"user_id": message.from_user.id, "messages": ["Проблемы с сервером, попробуйте позже"], "markup": None}
 
     @staticmethod
-    def __dict_to_json(data: dict) -> dict:
+    def __dict_to_json(data: dict) -> str:
         return json.dumps(data, ensure_ascii=False)

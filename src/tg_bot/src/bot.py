@@ -20,6 +20,14 @@ class TgBot(TeleBot, AbstractTgBot):
         super().__init__(token)
         self.__api: AbstractApi = api
 
+        self.__commands: dict = {
+            "Начать регистрацию": self.__change_cerate_data,
+            "Изменить данные": self.__change_cerate_data,
+            "Мои данные": self.__show_data,
+            "Оценки": self.__show_marks,
+            "Помощь": self.__help,
+        }
+
     def run(self) -> None:
         super().run()
         self.register_message_handler(self.__start, commands=["start"])
@@ -37,8 +45,9 @@ class TgBot(TeleBot, AbstractTgBot):
         self.__send_data(data)
 
     def __text_messages(self, message: types.Message) -> None:
-        data: dict = self.__api.text_messages(message)
-        self.__send_data(data)
+        if message.text in self.__commands:
+            return self.__commands[message.text](message)
+        return self.__send_data(message.from_user.id, ("Неизвестная команда"))
 
     def __help(self, message: types.Message) -> None:
         data: dict = self.__api.help(message)

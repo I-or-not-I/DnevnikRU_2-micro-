@@ -1,0 +1,7 @@
+{% for subject in data.keys() %}
+    {%- if data[subject][0] -%}
+        {{ subject }}: {{ ', '.join(data[subject].0) }} --- {{ data[subject].1 }} 
+    {% else -%} 
+        {{ subject }} - пока нет оценок
+    {% endif %}
+{% endfor %}

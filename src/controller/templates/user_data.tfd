@@ -1,0 +1,2 @@
+Ваш логин: {{ data.login }}
+Ваш пароль: {{ data.password }}

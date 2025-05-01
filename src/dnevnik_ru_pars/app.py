@@ -1,3 +1,7 @@
+"""
+Основной модуль запуска FastAPI сервера.
+"""
+
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,9 +13,22 @@ from src.parser import AbstractParser, Parser
 
 
 def main() -> None:
+    """Основная функция инициализации и запуска сервера.
+
+    Выполняет:
+    1. Настройку системы логирования
+    2. Создание FastAPI приложения
+    3. Добавление CORS middleware
+    4. Инициализацию парсера данных
+    5. Подключение роутеров
+    6. Запуск сервера через Uvicorn
+
+    :raises Exception: При ошибках инициализации компонентов
+    """
     Logger(logging.DEBUG)
 
     app: FastAPI = FastAPI()
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],  # Изменить

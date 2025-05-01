@@ -1,3 +1,7 @@
+"""
+Основной модуль запуска FastAPI сервера для образовательного бота.
+"""
+
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +19,23 @@ from config import DB_DATA, PARSER_IP
 
 
 def main() -> None:
+    """Основная функция инициализации и запуска сервера.
+
+    Выполняет:
+    1. Настройку системы логирования
+    2. Создание FastAPI приложения
+    3. Настройку CORS политик
+    4. Инициализацию компонентов системы:
+       - База данных
+       - Шаблонизатор
+       - API клиент
+       - Генератор разметок
+       - Бизнес-логика
+    5. Подключение роутеров
+    6. Запуск сервера
+
+    :raises Exception: При ошибках инициализации компонентов
+    """
     Logger(logging.DEBUG)
 
     app: FastAPI = FastAPI()

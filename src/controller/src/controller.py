@@ -1,6 +1,18 @@
+"""
+Модуль контроллера для обработки бизнес-логики приложения.
+
+.. moduleauthor:: Ваше имя <ваш@email>
+
+.. note::
+    Зависимости:
+    - AbstractApi: Для взаимодействия с внешним API
+    - AbstractDb: Для работы с базой данных
+    - AbstractTemplateEngine: Для генерации текстовых сообщений
+    - AbstractMarkups: Для создания клавиатурных разметок
+"""
+
 import abc
 import logging
-
 from models.message import Message
 from src.template_engine import AbstractTemplateEngine
 from src.db import AbstractDb
@@ -9,52 +21,86 @@ from src.markups import AbstractMarkups
 
 
 class AbstractController(abc.ABC):
-    @abc.abstractmethod
-    def __init__(self, api: AbstractApi, db: AbstractDb, template_engine: AbstractTemplateEngine, markups: AbstractMarkups) -> None:
-        logging.debug("Инициализация Controller")
+    """Абстрактный базовый класс контроллера для обработки команд.
+
+    :param api: Экземпляр API для внешних запросов
+    :param db: Экземпляр базы данных
+    :param template_engine: Движок шаблонов сообщений
+    :param markups: Генератор разметок клавиатур
+    """
 
     @abc.abstractmethod
-    def start(message: Message) -> dict:
-        logging.debug("Запрос start пользователем {message.from_.id}")
+    def __init__(
+        self, api: AbstractApi, db: AbstractDb, template_engine: AbstractTemplateEngine, markups: AbstractMarkups
+    ) -> None:
+        """Инициализация Abstract."""
 
     @abc.abstractmethod
-    def help(message: Message) -> dict:
-        logging.debug("Запрос help пользователем {message.from_.id}")
+    def start(self, message: Message) -> dict:
+        """Обработка команды /start.
+
+        :param message: Входящее сообщение
+        :type message: Message
+        :return: Ответ в формате {user_id, messages, markup}
+        """
 
     @abc.abstractmethod
-    def change_cerate_data(message: Message) -> dict:
-        logging.debug("Запрос change_cerate_data пользователем {message.from_.id}")
+    def help(self, message: Message) -> dict:
+        """Обработка команды /help."""
 
     @abc.abstractmethod
-    def show_data(message: Message) -> dict:
-        logging.debug("Запрос show_data пользователем {message.from_.id}")
+    def change_create_data(self, message: Message) -> dict:
+        """Обновление или создание данных пользователя."""
 
     @abc.abstractmethod
-    def show_marks(message: Message) -> dict:
-        logging.debug("Запрос show_marks пользователем {message.from_.id}")
+    def show_data(self, message: Message) -> dict:
+        """Показ данных пользователя."""
+
+    @abc.abstractmethod
+    def show_marks(self, message: Message) -> dict:
+        """Показ оценок пользователя."""
 
 
 class Controller(AbstractController):
-    def __init__(self, api: AbstractApi, db: AbstractDb, template_engine: AbstractTemplateEngine, markups: AbstractMarkups) -> None:
-        super().__init__(api, db, template_engine, markups)
+    """Конкретная реализация контроллера.
+
+    :param api: Реализация AbstractApi
+    :param db: Реализация AbstractDb
+    :param template_engine: Реализация AbstractTemplateEngine
+    :param markups: Реализация AbstractMarkups
+    """
+
+    def __init__(
+        self, api: AbstractApi, db: AbstractDb, template_engine: AbstractTemplateEngine, markups: AbstractMarkups
+    ) -> None:
+        logging.debug("Инициализация Controller")
         self.__db: AbstractDb = db
         self.__template_engine: AbstractTemplateEngine = template_engine
         self.__api: AbstractApi = api
         self.__markups: AbstractMarkups = markups
 
     def start(self, message: Message) -> dict:
+        """Обработка первого запуска бота.
+
+        .. note::
+            Логика:
+            1. Проверка регистрации пользователя
+            2. Возврат соответствующего шаблона:
+               - registered.tfb для зарегистрированных
+               - unregistered.tfb для новых пользователей
+        """
         if self.__db.user_in_table(message.from_.id):
-            ans_message: str = self.__template_engine.render("registered.tfb")
-            markup: str = self.__markups.all()
-            return self.__base_ans(message.from_.id, ans_message, markup)
-        markup: str = self.__markups.registration()
-        return self.__unregistered(message.from_.id, markup)
+            return self.__base_ans(
+                message.from_.id, self.__template_engine.render("registered.tfb"), self.__markups.all()
+            )
+        return self.__unregistered(message.from_.id, self.__markups.registration())
 
     def help(self, message: Message) -> dict:
-        ans_message: str = self.__template_engine.render("help.tfb")
-        return self.__base_ans(message.from_.id, ans_message)
+        """Возвращает справочную информацию."""
+        return self.__base_ans(message.from_.id, self.__template_engine.render("help.tfb"))
 
-    def change_cerate_data(self, message: Message) -> dict:
+    def change_create_data(self, message: Message) -> dict:
+        """Обновление учетных данных пользователя."""
         data: dict = {"login": message.login, "password": message.password}
         response: dict | bool = self.__api.verify_data_get_personal_data(data)
         if not response:
@@ -72,27 +118,36 @@ class Controller(AbstractController):
         return self.__base_ans(message.from_.id, ans_message, markup)
 
     def show_data(self, message: Message) -> dict:
-        if self.__db.user_in_table(message.from_.id):
-            data: dict = self.__db.get_user_data(message.from_.id)
-            ans_message: str = self.__template_engine.render("user_data.tfd", data)
-            return self.__base_ans(message.from_.id, ans_message)
-        markup: str = self.__markups.change_data
-        return self.__unregistered(message.from_.id, markup)
+        """Отображение персональных данных."""
+        if not self.__db.user_in_table(message.from_.id):
+            return self.__unregistered(message.from_.id, self.__markups.change_data)
+
+        return self.__base_ans(
+            message.from_.id, self.__template_engine.render("user_data.tfd", self.__db.get_user_data(message.from_.id))
+        )
 
     def show_marks(self, message: Message) -> dict:
-        if self.__db.user_in_table(message.from_.id):
-            data: dict = self.__db.get_user_data(message.from_.id)
-            response: dict | bool = self.__api.get_marks(data)
-            if not response:
-                return self.__unregistered(message.from_.id)
+        """Получение и отображение оценок."""
+        if not self.__db.user_in_table(message.from_.id):
+            return self.__unregistered(message.from_.id)
 
-            ans_message: str = self.__template_engine.render("show_marks.tfb", response)
-            return self.__base_ans(message.from_.id, ans_message)
-        return self.__unregistered(message.from_.id)
+        if not (data := self.__api.get_marks(self.__db.get_user_data(message.from_.id))):
+            return self.__unregistered(message.from_.id)
 
-    def __unregistered(self, user_id: str, markup: str = None) -> dict:
+        return self.__base_ans(message.from_.id, self.__template_engine.render("show_marks.tfb", data))
+
+    def __unregistered(self, user_id: int, markup: str = None) -> dict:
+        """Вспомогательный метод для незарегистрированных пользователей.
+
+        :meta private:
+        """
         return self.__base_ans(user_id, self.__template_engine.render("unregistered.tfb"), markup)
 
     @staticmethod
-    def __base_ans(user_id: str, message: str, markup: str = None) -> dict:
+    def __base_ans(user_id: int, message: str, markup: str = None) -> dict:
+        """Базовый формат ответа.
+
+        :meta private:
+        :return: {"user_id": int, "messages": List[str], "markup": Optional[str]}
+        """
         return {"user_id": user_id, "messages": [message], "markup": markup}

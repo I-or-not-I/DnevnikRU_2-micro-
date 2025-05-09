@@ -60,6 +60,10 @@ class AbstractController(abc.ABC):
     def show_marks(self, message: Message) -> dict:
         """Показ оценок пользователя."""
 
+    @abc.abstractmethod
+    def show_timetable(self, message: Message) -> dict:
+        """Показ расписания пользователя."""
+
 
 class Controller(AbstractController):
     """Конкретная реализация контроллера.
@@ -136,6 +140,16 @@ class Controller(AbstractController):
 
         return self.__base_ans(message.from_.id, self.__template_engine.render("show_marks.tfb", data))
 
+    def show_timetable(self, message: Message) -> dict:
+        """Получение и отображение расписания."""
+        if not self.__db.user_in_table(message.from_.id):
+            return self.__unregistered(message.from_.id)
+
+        if not (data := self.__api.get_timetable(self.__db.get_user_data(message.from_.id))):
+            return self.__unregistered(message.from_.id)
+
+        return self.__file_ans(message.from_.id, data["timetable"], "Расписание.html")
+
     def __unregistered(self, user_id: int, markup: str = None) -> dict:
         """Вспомогательный метод для незарегистрированных пользователей.
 
@@ -151,3 +165,12 @@ class Controller(AbstractController):
         :return: {"user_id": int, "messages": List[str], "markup": Optional[str]}
         """
         return {"user_id": user_id, "messages": [message], "markup": markup}
+
+    @staticmethod
+    def __file_ans(user_id: int, message: str, file_name: str, markup: str = None) -> dict:
+        """Базовый формат ответа для файла(str).
+
+        :meta private:
+        :return: {"user_id": int, "message": str, "markup": Optional[str]}
+        """
+        return {"user_id": user_id, "message": message, "file_name": file_name, "markup": markup}

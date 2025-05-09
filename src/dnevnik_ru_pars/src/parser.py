@@ -32,6 +32,16 @@ class AbstractParser(abc.ABC):
         :return: Словарь с оценками или False при ошибке
         """
 
+    @staticmethod
+    @abc.abstractmethod
+    def get_timetable(data: UserData) -> dict | bool:
+        """Получение расписания.
+
+        :param data: Данные пользователя
+        :type data: UserData
+        :return: Словарь с расписанием или False при ошибке
+        """
+
     @abc.abstractmethod
     def get_cookies_person_school_group_id(self, data: UserData) -> dict | bool:
         """Получение идентификаторов и cookies сессии.
@@ -79,6 +89,23 @@ class Parser(AbstractParser):
                 marks[subject["name"]].append(subject["average"]["value"])
 
         return marks
+
+    @staticmethod
+    def get_timetable(user_data: UserData) -> dict | bool:
+        url: str = (
+            f"https://schools.dnevnik.ru/v2/schedules/view?school={user_data.school_id}&group={user_data.group_id}"
+        )
+        try:
+            html: requests.Response = requests.get(url, cookies=user_data.cookies).text
+        except requests.exceptions.RequestException:
+            return False
+        soup = BeautifulSoup(html, features="lxml")
+        try:
+            url: str = soup.find("a", {"title": "Версия для печати"})["href"]
+        except TypeError:
+            logging.error("Нет <a>, 'title' = Версия для печати")
+        html: requests.Response = requests.get(url, cookies=user_data.cookies).text
+        return {"timetable": html}
 
     def get_cookies_person_school_group_id(self, user_data: UserData) -> dict | bool:
         """Получение идентификаторов и cookies через парсинг веб-страницы.

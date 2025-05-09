@@ -93,6 +93,16 @@ class AbstractApi(abc.ABC):
         :rtype: dict
         """
 
+    @abc.abstractmethod
+    def show_timetable(self, message: types.Message) -> dict:
+        """Получить информацию о расписании.
+
+        :param message: Входящее сообщение от пользователя
+        :type message: types.Message
+        :return: Данные о расписании из системы
+        :rtype: dict
+        """
+
 
 class Api(AbstractApi):
     """Конкретная реализация API с использованием HTTP-протокола.
@@ -112,6 +122,7 @@ class Api(AbstractApi):
 
     def __init__(self, controller_ip: str) -> None:
         self.__controller_ip: str = controller_ip.rstrip("/")
+        self.__timeout: int = 5
 
     def __get_data(self, path: str, message: types.Message, data: dict = None) -> dict:
         """Основной метод выполнения запросов к API.
@@ -128,7 +139,7 @@ class Api(AbstractApi):
         try:
             url: str = urljoin(f"{self.__controller_ip}/", path)
             json_data: dict = data if data else message.json
-            response: requests.Response = requests.post(url, json=json_data, timeout=5)
+            response: requests.Response = requests.post(url, json=json_data, timeout=self.__timeout)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -164,6 +175,11 @@ class Api(AbstractApi):
         """Реализация запроса информации об оценках."""
         logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: show_marks")
         return self.__get_data("show_marks", message)
+
+    def show_timetable(self, message: types.Message) -> dict:
+        """Реализация запроса информации о расписании."""
+        logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: show_timetable")
+        return self.__get_data("show_timetable", message)
 
     @staticmethod
     def __error_message(message: types.Message) -> dict:

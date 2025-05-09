@@ -32,6 +32,7 @@ class Router(AbstractRouter):
         """
         base_register: dict = {
             "get_marks": self.__get_marks,
+            "get_timetable": self.__get_timetable,
             "verify_data_get_personal_data": self.__verify_data_get_personal_data,
         }
         for path in base_register.keys():
@@ -58,6 +59,20 @@ class Router(AbstractRouter):
         :raises HTTPException: 400 если данные некорректны
         """
         content: dict = self.__parser.get_marks(data)
+        if not content:
+            raise HTTPException(status_code=400)
+        return JSONResponse(content=content)
+
+    async def __get_timetable(self, data: UserData) -> JSONResponse:
+        """Эндпоинт для получения расписания.
+
+        :param data: Данные пользователя
+        :type data: :class:`UserData`
+        :return: JSON с расписанием
+        :rtype: :class:`JSONResponse`
+        :raises HTTPException: 400 если данные некорректны
+        """
+        content: dict = self.__parser.get_timetable(data)
         if not content:
             raise HTTPException(status_code=400)
         return JSONResponse(content=content)

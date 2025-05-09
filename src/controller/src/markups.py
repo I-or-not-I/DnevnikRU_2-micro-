@@ -76,12 +76,13 @@ class Markups(AbstractMarkups):
 
         Кнопки:
         - "Оценки"
+        - "Расписание"
         - "Изменить данные"
         - "Помощь"
 
         :return: JSON-строка клавиатуры 2x2
         """
-        buttons: tuple = ("Оценки", "Изменить данные", "Помощь")
+        buttons: tuple = ("Оценки", "Расписание", "Изменить данные", "Помощь")
         return self.__default_markup(buttons, row_width=2)
 
     @staticmethod

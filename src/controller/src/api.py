@@ -41,6 +41,16 @@ class AbstractApi(abc.ABC):
         :rtype: dict | bool
         """
 
+    @abc.abstractmethod
+    def get_timetable(self, data: dict) -> dict | bool:
+        """Получение расписания.
+
+        :param data: Данные для запроса расписания
+        :type data: dict
+        :return: Словарь с расписанием или False при ошибке
+        :rtype: dict | bool
+        """
+
 
 class Api(AbstractApi):
     """Конкретная реализация API для работы с парсером через HTTP.
@@ -90,6 +100,13 @@ class Api(AbstractApi):
         Использует эндпоинт /get_marks
         """
         return self.__get_data("get_marks", data)
+
+    def get_timetable(self, data: dict) -> dict | bool:
+        """Реализация метода получения расписания.
+
+        Использует эндпоинт /get_timetable
+        """
+        return self.__get_data("get_timetable", data)
 
     @staticmethod
     def __dict_to_json(data: dict) -> str:

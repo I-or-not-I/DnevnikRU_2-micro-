@@ -142,9 +142,9 @@ class Db(AbstractDb):
 
     def create_new_user(self, id: int, data: dict, cursor: cursor = None) -> None:
         """Добавляет нового пользователя в БД."""
-        data["id"] = id
         if not cursor:
             return self.__connection(func=self.create_new_user, id=id, data=data, commit=True)
+        data["id"] = id
         enquiry: str = "INSERT INTO data (%s) VALUES (%s)" % (", ".join(data.keys()), ", ".join(["%s"] * len(data)))
         cursor.execute(enquiry, list(data.values()))
 

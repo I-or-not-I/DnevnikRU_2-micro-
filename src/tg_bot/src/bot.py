@@ -5,6 +5,7 @@
 import logging
 import abc
 from telebot import TeleBot, types
+from io import BytesIO
 from src.api import AbstractApi
 
 
@@ -50,6 +51,7 @@ class TgBot(TeleBot, AbstractTgBot):
             "Изменить данные": self.__change_create_data,
             "Мои данные": self.__show_data,
             "Оценки": self.__show_marks,
+            "Расписание": self.__show_timetable,
             "Помощь": self.__help,
         }
 
@@ -69,6 +71,7 @@ class TgBot(TeleBot, AbstractTgBot):
         self.register_message_handler(self.__show_data, commands=["show_data"])
         self.register_message_handler(self.__change_create_data, commands=["change_data"])
         self.register_message_handler(self.__show_marks, commands=["grades"])
+        self.register_message_handler(self.__show_timetable, commands=["timetable"])
 
         self.register_message_handler(self.__text_messages, content_types=["text"])
 
@@ -166,6 +169,15 @@ class TgBot(TeleBot, AbstractTgBot):
         data: dict = self.__api.show_marks(message)
         self.__send_data(data)
 
+    def __show_timetable(self, message: types.Message) -> None:
+        """Показать расписание пользователя.
+
+        :param message: Входящее сообщение
+        :type message: :class:`types.Message`
+        """
+        data: dict = self.__api.show_timetable(message)
+        self.__send_file(data)
+
     def __send_data(self, data: dict) -> None:
         """Отправка данных пользователю.
 
@@ -182,3 +194,26 @@ class TgBot(TeleBot, AbstractTgBot):
         """
         for message in data["messages"]:
             self.send_message(data["user_id"], message, reply_markup=data["markup"])
+
+    def __send_file(self, data: dict) -> None:
+        """Отправка данных пользователю (файлом).
+
+        :param data: Словарь с данными для отправки
+        :type data: :obj:`dict`
+
+        .. note::
+            Формат данных:
+            - user_id: ID пользователя (int)
+            - message: Сообщение (str)
+            - file_name: Имя файла (str)
+            - markup: Разметка клавиатуры (Optional)
+
+        :raises KeyError: При отсутствии обязательных ключей
+        """
+        file_buffer = BytesIO(data["message"].encode("utf-8"))
+        self.send_document(
+            chat_id=data["user_id"],
+            document=file_buffer,
+            visible_file_name=data["file_name"],
+            reply_markup=data["markup"],
+        )

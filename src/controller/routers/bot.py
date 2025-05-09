@@ -27,6 +27,7 @@ class Router(AbstractRouter):
         - /change_create_data
         - /show_data
         - /show_marks
+        - /show_timetable
     """
 
     def __init__(self, controller: AbstractController) -> None:
@@ -46,6 +47,7 @@ class Router(AbstractRouter):
             "change_create_data": self.__change_create_data,
             "show_data": self.__show_data,
             "show_marks": self.__show_marks,
+            "show_timetable": self.__show_timetable,
         }
         for path in base_register.keys():
             self.__base_register(path, base_register[path])
@@ -125,6 +127,17 @@ class Router(AbstractRouter):
         :rtype: :class:`JSONResponse`
         """
         content: dict = self.__controller.show_marks(message)
+        return JSONResponse(content=content)
+
+    async def __show_timetable(self, message: Message) -> JSONResponse:
+        """Обработчик показа расписания.
+
+        :param message: Входящее сообщение
+        :type message: :class:`Message`
+        :return: Ответ контроллера
+        :rtype: :class:`JSONResponse`
+        """
+        content: dict = self.__controller.show_timetable(message)
         return JSONResponse(content=content)
 
     def get_router(self) -> APIRouter:

@@ -9,7 +9,7 @@ import uvicorn
 
 from utils.logger import Logger
 from routers import abstract, base, dnevnik
-from src.parser import AbstractParser, Parser
+from src.async_parser import AbstractParser, Parser
 
 
 def main() -> None:

@@ -58,7 +58,7 @@ class Router(AbstractRouter):
         :rtype: :class:`JSONResponse`
         :raises HTTPException: 400 если данные некорректны
         """
-        content: dict = self.__parser.get_marks(data)
+        content: dict = await self.__parser.get_marks(data)
         if not content:
             raise HTTPException(status_code=400)
         return JSONResponse(content=content)
@@ -72,7 +72,7 @@ class Router(AbstractRouter):
         :rtype: :class:`JSONResponse`
         :raises HTTPException: 400 если данные некорректны
         """
-        content: dict = self.__parser.get_timetable(data)
+        content: dict = await self.__parser.get_timetable(data)
         if not content:
             raise HTTPException(status_code=400)
         return JSONResponse(content=content)
@@ -86,7 +86,7 @@ class Router(AbstractRouter):
         :rtype: :class:`JSONResponse`
         :raises HTTPException: 400 если верификация не пройдена
         """
-        content: dict = self.__parser.get_cookies_person_school_group_id(data)
+        content: dict = await self.__parser.get_cookies_person_school_group_id(data)
         if not content:
             raise HTTPException(status_code=400)
         return JSONResponse(content=content)

@@ -2,7 +2,6 @@
 Основной модуль запуска FastAPI сервера для образовательного бота.
 """
 
-import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -11,11 +10,11 @@ from utils.logger import Logger
 from src.controller import AbstractController, Controller
 from src.db import AbstractDb, Db
 from src.template_engine import AbstractTemplateEngine, TemplateEngine
-from src.api import AbstractApi, Api
+from src.async_api import AbstractApi, Api
 from src.markups import AbstractMarkups, Markups
 from routers import abstract, base, bot
 
-from config import DB_DATA, PARSER_IP
+from config import DB_DATA, PARSER_IP, LOGGING_LEVEL
 
 
 def main() -> None:
@@ -36,7 +35,7 @@ def main() -> None:
 
     :raises Exception: При ошибках инициализации компонентов
     """
-    Logger(logging.DEBUG)
+    Logger(LOGGING_LEVEL)
 
     app: FastAPI = FastAPI()
     app.add_middleware(

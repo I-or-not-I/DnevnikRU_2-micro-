@@ -5,7 +5,7 @@
 import abc
 from typing import Any, Callable
 from psycopg2 import connect
-from psycopg2.extensions import cursor
+from psycopg2 import extensions
 
 
 class AbstractDb(abc.ABC):
@@ -36,7 +36,7 @@ class AbstractDb(abc.ABC):
         """
 
     @abc.abstractmethod
-    def create_data_table(self, cursor: cursor = None) -> None:
+    def create_data_table(self, cursor: extensions.cursor = None) -> None:
         """Создание таблицы данных если не существует.
 
         :param cursor: Курсор для выполнения в транзакции (опционально)
@@ -44,7 +44,7 @@ class AbstractDb(abc.ABC):
         """
 
     @abc.abstractmethod
-    def create_new_user(self, id: int, data: dict, cursor: cursor = None) -> None:
+    def create_new_user(self, id: int, data: dict, cursor: extensions.cursor = None) -> None:
         """Создание нового пользователя.
 
         :param id: Уникальный ID пользователя
@@ -56,7 +56,7 @@ class AbstractDb(abc.ABC):
         """
 
     @abc.abstractmethod
-    def update_user_data(self, id: int, data: dict, cursor: cursor = None) -> None:
+    def update_user_data(self, id: int, data: dict, cursor: extensions.cursor = None) -> None:
         """Обновление данных пользователя.
 
         :param id: ID пользователя для обновления
@@ -68,7 +68,7 @@ class AbstractDb(abc.ABC):
         """
 
     @abc.abstractmethod
-    def user_in_table(self, id: int, cursor: cursor = None) -> bool:
+    def user_in_table(self, id: int, cursor: extensions.cursor = None) -> bool:
         """Проверка существования пользователя.
 
         :param id: ID пользователя для проверки
@@ -78,7 +78,7 @@ class AbstractDb(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_user_data(self, id: int, cursor: cursor = None) -> dict:
+    def get_user_data(self, id: int, cursor: extensions.cursor = None) -> dict:
         """Получение всех данных пользователя.
 
         :param id: ID пользователя
@@ -133,14 +133,14 @@ class Db(AbstractDb):
                     connection.commit()
                 return ans
 
-    def create_data_table(self, cursor: cursor = None) -> None:
+    def create_data_table(self, cursor: extensions.cursor = None) -> None:
         """Создает таблицу данных если она не существует."""
         if not cursor:
             return self.__connection(self.create_data_table, commit=True)
         enquiry: str = f"CREATE TABLE IF NOT EXISTS data ({', '.join(f'{k} {v}' for k, v in self.__columns.items())})"
         cursor.execute(enquiry)
 
-    def create_new_user(self, id: int, data: dict, cursor: cursor = None) -> None:
+    def create_new_user(self, id: int, data: dict, cursor: extensions.cursor = None) -> None:
         """Добавляет нового пользователя в БД."""
         if not cursor:
             return self.__connection(func=self.create_new_user, id=id, data=data, commit=True)
@@ -148,20 +148,20 @@ class Db(AbstractDb):
         enquiry: str = "INSERT INTO data (%s) VALUES (%s)" % (", ".join(data.keys()), ", ".join(["%s"] * len(data)))
         cursor.execute(enquiry, list(data.values()))
 
-    def update_user_data(self, id: int, data: dict, cursor: cursor = None) -> None:
+    def update_user_data(self, id: int, data: dict, cursor: extensions.cursor = None) -> None:
         """Обновляет данные существующего пользователя."""
         if not cursor:
             return self.__connection(func=self.update_user_data, id=id, data=data, commit=True)
         cursor.execute(f"UPDATE data SET {', '.join(f"{k} = '{v}'" for k, v in data.items())} WHERE id = {id}")
 
-    def user_in_table(self, id: int, cursor: cursor = None) -> bool:
+    def user_in_table(self, id: int, cursor: extensions.cursor = None) -> bool:
         """Проверяет наличие пользователя в БД."""
         if not cursor:
             return self.__connection(func=self.user_in_table, id=id)
         cursor.execute(f"SELECT id FROM data WHERE id = '{id}'")
         return cursor.fetchone() is not None
 
-    def get_user_data(self, id: int, cursor: cursor = None) -> dict:
+    def get_user_data(self, id: int, cursor: extensions.cursor = None) -> dict:
         """Возвращает все данные пользователя в виде словаря."""
         if not cursor:
             return self.__connection(func=self.get_user_data, id=id)

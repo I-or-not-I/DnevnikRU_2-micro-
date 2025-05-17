@@ -2,9 +2,9 @@
 Модуль для работы с шаблонами на основе Jinja2.
 """
 
-from jinja2 import Environment, Template, FileSystemLoader
 import abc
 import logging
+from jinja2 import Environment, Template, FileSystemLoader
 
 
 class AbstractTemplateEngine(abc.ABC):
@@ -49,7 +49,7 @@ class TemplateEngine(AbstractTemplateEngine):
         logging.debug("Инициализация TemplateEngine")
         self.__environment = Environment(loader=FileSystemLoader(templates_folder_path))
 
-    def render(self, template_path: str, data: dict = {}) -> str:
+    def render(self, template_path: str, data: dict | None = None) -> str:
         """Рендеринг шаблона с данными.
 
         :param data: По умолчанию используется пустой словарь

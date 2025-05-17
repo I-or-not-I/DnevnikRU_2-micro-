@@ -2,11 +2,10 @@
 Основной модуль запуска телеграм-бота.
 """
 
-import logging
 from utils.logger import Logger
 from src.bot import AbstractTgBot, TgBot
 from src.api import AbstractApi, Api
-from config import TOKEN, CONTROLLER_IP
+from config import TOKEN, CONTROLLER_IP, LOGGING_LEVEL
 
 
 def main() -> None:
@@ -21,7 +20,7 @@ def main() -> None:
     :raises ConnectionError: При проблемах с подключением к Telegram API
     :raises ValueError: При невалидных параметрах конфигурации
     """
-    Logger(logging.DEBUG)
+    Logger(LOGGING_LEVEL)
 
     api: AbstractApi = Api(CONTROLLER_IP)
     bot: AbstractTgBot = TgBot(TOKEN, api)

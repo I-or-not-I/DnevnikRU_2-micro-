@@ -4,9 +4,9 @@
 
 import logging
 import abc
-from telebot import TeleBot, types
 from io import BytesIO
-from src.api import AbstractApi
+from telebot import TeleBot, types
+from src.async_api import AbstractApi
 
 
 class AbstractTgBot(abc.ABC):
@@ -65,7 +65,7 @@ class TgBot(TeleBot, AbstractTgBot):
 
         :raises ConnectionError: При проблемах с подключением
         """
-        logging.info("Запуск бота")
+        logging.info("Бот запущен")
         self.register_message_handler(self.__start, commands=["start"])
         self.register_message_handler(self.__help, commands=["help"])
         self.register_message_handler(self.__show_data, commands=["show_data"])
@@ -93,7 +93,8 @@ class TgBot(TeleBot, AbstractTgBot):
         :type message: :class:`types.Message`
         """
         if message.text in self.__commands:
-            return self.__commands[message.text](message)
+            self.__commands[message.text](message)
+            return
         self.__send_data({"user_id": message.from_user.id, "messages": ["Неизвестная команда"], "markup": None})
 
     def __help(self, message: types.Message) -> None:

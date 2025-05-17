@@ -8,8 +8,8 @@
 
 import logging
 import abc
-import requests
 from urllib.parse import urljoin
+import requests
 from telebot import types
 
 
@@ -142,43 +142,40 @@ class Api(AbstractApi):
             response: requests.Response = requests.post(url, json=json_data, timeout=self.__timeout)
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Ошибка запроса: {e}")
-            return self.__error_message(message)
-        except Exception as e:
-            logging.error(f"Непредвиденная ошибка: {e}")
+        except requests.exceptions.RequestException as exc:
+            logging.error("Ошибка запроса: %s", exc)
             return self.__error_message(message)
 
     def start(self, message: types.Message) -> dict:
         """Реализация метода запуска бота"""
-        logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: start")
+        logging.info("Пользователь: %s. Вызвал функцию: start", message.from_user.id)
         return self.__get_data("start", message)
 
     def help(self, message: types.Message) -> dict:
         """Реализация метода помощи"""
-        logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: help")
+        logging.info("Пользователь: %s. Вызвал функцию: help", message.from_user.id)
         return self.__get_data("help", message)
 
     def change_create_data(self, message: types.Message, login: str, password: str) -> dict:
         """Реализация обновления данных с добавлением учетных данных."""
-        logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: change_create_data")
+        logging.info("Пользователь: %s. Вызвал функцию: change_create_data", message.from_user.id)
         data: dict = message.json
         data.update({"login": login, "password": password})
         return self.__get_data("change_create_data", message, data)
 
     def show_data(self, message: types.Message) -> dict:
         """Реализация запроса персональных данных."""
-        logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: show_data")
+        logging.info("Пользователь: %s. Вызвал функцию: show_data", message.from_user.id)
         return self.__get_data("show_data", message)
 
     def show_marks(self, message: types.Message) -> dict:
         """Реализация запроса информации об оценках."""
-        logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: show_marks")
+        logging.info("Пользователь: %s. Вызвал функцию: show_marks", message.from_user.id)
         return self.__get_data("show_marks", message)
 
     def show_timetable(self, message: types.Message) -> dict:
         """Реализация запроса информации о расписании."""
-        logging.info(f"Пользователь: {message.from_user.id}. Вызвал функцию: show_timetable")
+        logging.info("Пользователь: %s. Вызвал функцию: show_timetable", message.from_user.id)
         return self.__get_data("show_timetable", message)
 
     @staticmethod

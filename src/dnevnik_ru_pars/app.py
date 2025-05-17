@@ -2,7 +2,6 @@
 Основной модуль запуска FastAPI сервера.
 """
 
-import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -10,6 +9,7 @@ import uvicorn
 from utils.logger import Logger
 from routers import abstract, base, dnevnik
 from src.async_parser import AbstractParser, Parser
+from config import LOGGING_LEVEL
 
 
 def main() -> None:
@@ -25,7 +25,7 @@ def main() -> None:
 
     :raises Exception: При ошибках инициализации компонентов
     """
-    Logger(logging.DEBUG)
+    Logger(LOGGING_LEVEL)
 
     app: FastAPI = FastAPI()
 

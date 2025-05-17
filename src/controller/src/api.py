@@ -3,8 +3,8 @@
 """
 
 import abc
-import requests
 from json import dumps
+import requests
 
 
 class AbstractApi(abc.ABC):

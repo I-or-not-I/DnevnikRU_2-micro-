@@ -44,3 +44,12 @@ class Router(AbstractRouter):
         :rtype: :class:`APIRouter`
         """
         return self.__router
+
+    def get_endpoints(self) -> tuple:
+        """Получение всех эндпоинтов
+
+        :return: список всех эндпоинтов
+        :rtype: tuple
+        """
+
+        return ("/",)

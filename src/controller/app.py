@@ -7,12 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from utils.logger import Logger
-from src.controller import AbstractController, Controller
-from src.db import AbstractDb, Db
+from src.async_controller import AbstractController, Controller
+from src.async_db import AbstractDb, Db
 from src.template_engine import AbstractTemplateEngine, TemplateEngine
 from src.async_api import AbstractApi, Api
 from src.markups import AbstractMarkups, Markups
-from routers import abstract, base, bot
+from routers import abstract, base, async_bot
 
 from config import DB_DATA, PARSER_IP, LOGGING_LEVEL
 
@@ -53,7 +53,7 @@ def main() -> None:
     markups: AbstractMarkups = Markups()
     controller: AbstractController = Controller(api, db, template_engine, markups)
 
-    routers: tuple[abstract.AbstractRouter] = (base.Router(), bot.Router(controller))
+    routers: tuple[abstract.AbstractRouter] = (base.Router(), async_bot.Router(controller))
     for router in routers:
         app.include_router(router.get_router())
 

@@ -177,7 +177,10 @@ class TgBot(TeleBot, AbstractTgBot):
         :type message: :class:`types.Message`
         """
         data: dict = self.__api.show_timetable(message)
-        self.__send_file(data)
+        if "message" in data.keys():
+            self.__send_file(data)
+            return
+        self.__send_data(data)
 
     def __send_data(self, data: dict) -> None:
         """Отправка данных пользователю.

@@ -2,9 +2,10 @@
 Модуль API для взаимодействия с парсером данных.
 """
 
+import logging
 import abc
-from json import dumps
-import requests
+from json import dumps, decoder
+import httpx
 
 
 class AbstractApi(abc.ABC):
@@ -22,7 +23,7 @@ class AbstractApi(abc.ABC):
         """Инициализация API."""
 
     @abc.abstractmethod
-    def verify_data_get_personal_data(self, data: dict) -> dict | bool:
+    async def verify_data_get_personal_data(self, data: dict) -> dict | bool:
         """Верификация данных и получение персональной информации.
 
         :param data: Словарь с учетными данными
@@ -32,7 +33,7 @@ class AbstractApi(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_marks(self, data: dict) -> dict | bool:
+    async def get_marks(self, data: dict) -> dict | bool:
         """Получение информации об оценках.
 
         :param data: Данные для запроса оценок
@@ -42,7 +43,7 @@ class AbstractApi(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_timetable(self, data: dict) -> dict | bool:
+    async def get_timetable(self, data: dict) -> dict | bool:
         """Получение расписания.
 
         :param data: Данные для запроса расписания
@@ -61,8 +62,9 @@ class Api(AbstractApi):
 
     def __init__(self, parser_ip: str) -> None:
         self.__parser_ip: str = parser_ip.rstrip("/")
+        self.__timeout: float = 10.0
 
-    def __get_data(self, path: str, data: dict) -> dict | bool:
+    async def __get_data(self, path: str, data: dict) -> dict | bool:
         """Приватный метод выполнения POST-запросов.
 
         :param path: Конечная точка API
@@ -71,42 +73,44 @@ class Api(AbstractApi):
         :type data: dict
         :return: Ответ сервера или False при ошибке
         :rtype: dict | bool
-        :raises requests.exceptions.HTTPError: При ошибках HTTP
         :meta private:
         """
+        print(self.__dict_to_json(data))
         try:
-            response: requests.Response = requests.post(
-                f"{self.__parser_ip}/{path}", data=self.__dict_to_json(data), timeout=5
-            )
+            async with httpx.AsyncClient() as client:
+                response: httpx.Response = await client.post(
+                    f"{self.__parser_ip}/{path}", data=self.__dict_to_json(data), timeout=self.__timeout
+                )
             response.raise_for_status()
-        except requests.exceptions.HTTPError:
+        except httpx.HTTPStatusError as exc:
+            logging.info("Ошибка %s", exc)
             return False
 
         try:
             return response.json()
-        except requests.exceptions.JSONDecodeError:
+        except decoder.JSONDecodeError:
             return False
 
-    def verify_data_get_personal_data(self, data: dict) -> dict | bool:
+    async def verify_data_get_personal_data(self, data: dict) -> dict | bool:
         """Реализация метода верификации данных.
 
         Использует эндпоинт /verify_data_get_personal_data
         """
-        return self.__get_data("verify_data_get_personal_data", data)
+        return await self.__get_data("verify_data_get_personal_data", data)
 
-    def get_marks(self, data: dict) -> dict | bool:
+    async def get_marks(self, data: dict) -> dict | bool:
         """Реализация метода получения оценок.
 
         Использует эндпоинт /get_marks
         """
-        return self.__get_data("get_marks", data)
+        return await self.__get_data("get_marks", data)
 
-    def get_timetable(self, data: dict) -> dict | bool:
+    async def get_timetable(self, data: dict) -> dict | bool:
         """Реализация метода получения расписания.
 
         Использует эндпоинт /get_timetable
         """
-        return self.__get_data("get_timetable", data)
+        return await self.__get_data("get_timetable", data)
 
     @staticmethod
     def __dict_to_json(data: dict) -> str:

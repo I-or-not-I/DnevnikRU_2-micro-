@@ -27,7 +27,7 @@ class AbstractParser(abc.ABC):
         """Инициализация абстрактного парсера"""
 
     @abc.abstractmethod
-    async def get_marks(self, data: UserData) -> dict | bool:
+    async def get_marks(self, user_data: UserData) -> dict | bool:
         """Получение оценок пользователя.
 
         :param data: Данные пользователя
@@ -36,7 +36,7 @@ class AbstractParser(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def get_timetable(self, data: UserData) -> dict | bool:
+    async def get_timetable(self, user_data: UserData) -> dict | bool:
         """Получение расписания.
 
         :param data: Данные пользователя
@@ -45,7 +45,7 @@ class AbstractParser(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def get_cookies_person_school_group_id(self, data: UserData) -> dict | bool:
+    async def get_cookies_person_school_group_id(self, user_data: UserData) -> dict | bool:
         """Получение идентификаторов и cookies сессии.
 
         :param data: Данные пользователя
@@ -79,7 +79,7 @@ class Parser(AbstractParser):
                 response: httpx.Response = await client.get(url, cookies=user_data.cookies, timeout=self.__timeout)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            logging.warning(f"Ошибка парсинга оценок: {exc}")
+            logging.warning("Ошибка парсинга оценок: %s", exc)
             return False
 
         marks: dict = self.__process_marks(response.json())
@@ -94,7 +94,8 @@ class Parser(AbstractParser):
             marks[subject["name"]] = []
             local_marks: list = []
             for work in subject["works"]:
-                [local_marks.append(mark["value"]) for mark in work["marks"]]
+                for mark in work["marks"]:
+                    local_marks.append(mark["value"])
             marks[subject["name"]].append(local_marks)
             if local_marks:
                 marks[subject["name"]].append(subject["average"]["value"])
@@ -114,8 +115,8 @@ class Parser(AbstractParser):
                 response: str = await client.get(url, cookies=user_data.cookies, timeout=self.__timeout)
             html: str = response.text
             return {"timetable": html}
-        except Exception as exc:
-            logging.warning(f"Ошибка парсинга расписания: {exc}")
+        except httpx.HTTPStatusError as exc:
+            logging.warning("Ошибка парсинга расписания: %s", exc)
             return False
 
     async def get_cookies_person_school_group_id(self, user_data: UserData) -> dict | bool:
@@ -130,9 +131,9 @@ class Parser(AbstractParser):
 
         try:
             response: httpx.Response = await client.get("https://dnevnik.ru/userfeed", timeout=self.__timeout)
-        except Exception as e:
+        except httpx.HTTPStatusError as e:
             client.aclose()
-            logging.error(f"Ошибка парсинга: {e}")
+            logging.error("Ошибка парсинга: %s", e)
             return False
 
         cookies: dict = dict(zip(client.cookies.keys(), client.cookies.values()))
@@ -159,7 +160,7 @@ class Parser(AbstractParser):
         :param password: Пароль пользователя
         :return: Авторизованная сессия
         """
-        url = "https://login.dnevnik.ru/login/esia/rostov"
+        url = "https://login.dnevnik.ru/login"
         auth_data: dict = {
             "login": login,
             "password": password,

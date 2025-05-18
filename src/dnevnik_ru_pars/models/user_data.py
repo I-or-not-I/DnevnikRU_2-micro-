@@ -2,7 +2,7 @@
 Модуль с моделью данных пользователя.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Json
 
 
 class UserData(BaseModel):
@@ -20,7 +20,7 @@ class UserData(BaseModel):
     id: int | None = None
     password: str
     login: str
-    person_id: int | None = None
-    school_id: int | None = None
-    group_id: int | None = None
-    cookies: dict | None = None
+    person_id: str | None = None
+    school_id: str | None = None
+    group_id: str | None = None
+    cookies: Json | None = None

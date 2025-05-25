@@ -6,7 +6,7 @@ import logging
 import abc
 from io import BytesIO
 from telebot import TeleBot, types
-from src.async_api import AbstractApi
+from src.api import AbstractApi
 
 
 class AbstractTgBot(abc.ABC):

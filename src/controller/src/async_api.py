@@ -75,7 +75,6 @@ class Api(AbstractApi):
         :rtype: dict | bool
         :meta private:
         """
-        print(self.__dict_to_json(data))
         try:
             async with httpx.AsyncClient() as client:
                 response: httpx.Response = await client.post(

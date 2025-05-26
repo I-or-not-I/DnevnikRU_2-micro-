@@ -4,7 +4,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
+from uvicorn import run
 
 from utils.logger import Logger
 from routers import abstract, base, dnevnik
@@ -31,7 +31,7 @@ def main() -> None:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Изменить
+        allow_origins=["http://localhost"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -43,7 +43,7 @@ def main() -> None:
     for router in routers:
         app.include_router(router.get_router())
 
-    uvicorn.run(app, host="0.0.0.0", port=8022)  # Изменить
+    run(app, host="0.0.0.0", port=8022) 
 
 
 if __name__ == "__main__":

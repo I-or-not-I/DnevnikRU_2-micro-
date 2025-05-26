@@ -2,6 +2,8 @@
 Основной модуль запуска FastAPI сервера для образовательного бота.
 """
 
+from os import environ
+from json import loads
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from uvicorn import run
@@ -14,7 +16,7 @@ from src.async_api import AbstractApi, Api
 from src.markups import AbstractMarkups, Markups
 from routers import abstract, base, async_bot
 
-from config import DB_DATA, PARSER_IP, LOGGING_LEVEL
+from config import PARSER_IP, LOGGING_LEVEL
 
 
 def main() -> None:
@@ -40,12 +42,13 @@ def main() -> None:
     app: FastAPI = FastAPI()
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Изменить
+        allow_origins=["http://localhost"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
+    DB_DATA = loads(environ.get("DB_DATA"))
     db: AbstractDb = Database(DB_DATA)
     template_engine: AbstractTemplateEngine = TemplateEngine("templates")
     api: AbstractApi = Api(PARSER_IP)
@@ -56,7 +59,7 @@ def main() -> None:
     for router in routers:
         app.include_router(router.get_router())
 
-    run(app, host="0.0.0.0", port=8019)  # Изменить
+    run(app, host="0.0.0.0", port=8019)
 
 
 if __name__ == "__main__":

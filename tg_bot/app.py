@@ -2,10 +2,11 @@
 Основной модуль запуска телеграм-бота.
 """
 
+from os import environ
 from utils.logger import Logger
 from src.bot import AbstractTgBot, TgBot
 from src.api import AbstractApi, Api
-from config import TOKEN, CONTROLLER_IP, LOGGING_LEVEL
+from config import CONTROLLER_IP, LOGGING_LEVEL
 
 
 def main() -> None:
@@ -23,6 +24,8 @@ def main() -> None:
     Logger(LOGGING_LEVEL)
 
     api: AbstractApi = Api(CONTROLLER_IP)
+
+    TOKEN = environ.get("TOKEN")
     bot: AbstractTgBot = TgBot(TOKEN, api)
 
     bot.run()

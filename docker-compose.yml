@@ -1,0 +1,14 @@
+version: '3'
+services:
+  dnevnik_ru_pars:
+    build: ./dnevnik_ru_pars
+    ports:
+      - "8022:8022"
+  controller:
+    build: ./controller
+    ports:
+      - "8019:8019"
+    env_file: .env.controller 
+  tg_bot:
+    build: ./tg_bot
+    env_file: .env.tg_bot 

@@ -4,6 +4,7 @@
 
 import abc
 import logging
+from typing import Optional
 from jinja2 import Environment, Template, FileSystemLoader
 
 
@@ -29,7 +30,7 @@ class AbstractTemplateEngine(abc.ABC):
         :param template_path: Относительный путь к файлу шаблона
         :param data: Данные для подстановки в шаблон
         :type template_path: str
-        :type data: dict | None
+        :type data: Optional[dict]
         :return: Обработанный шаблон в виде строки
         :rtype: str
 
@@ -49,7 +50,7 @@ class TemplateEngine(AbstractTemplateEngine):
         logging.debug("Инициализация TemplateEngine")
         self.__environment = Environment(loader=FileSystemLoader(templates_folder_path))
 
-    def render(self, template_path: str, data: dict | None = None) -> str:
+    def render(self, template_path: str, data: Optional[dict] = None) -> str:
         """Рендеринг шаблона с данными.
 
         :param data: По умолчанию используется пустой словарь

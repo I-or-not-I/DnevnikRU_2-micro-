@@ -13,7 +13,9 @@
 
 import abc
 import logging
+
 from models.message import Message
+from models.user import User
 from src.template_engine import AbstractTemplateEngine
 from src.async_db import AbstractDb
 from src.async_api import AbstractApi
@@ -74,7 +76,8 @@ class Controller(AbstractController):
 
     async def start(self, message: Message) -> dict:
         """Асинхронная обработка первого запуска бота."""
-        if await self.__db.user_in_table(message.from_.id):
+        self.__db.create_tables()
+        if await self.__db.user_exists(message.from_.id):
             return self.__base_ans(
                 message.from_.id, self.__template_engine.render("registered.tfb"), self.__markups.all()
             )
@@ -93,31 +96,29 @@ class Controller(AbstractController):
             return self.__base_ans(
                 message.from_.id, self.__template_engine.render("incorrect_data.tfb"), self.__markups.change_data()
             )
-
         data.update(response)
-        if await self.__db.user_in_table(message.from_.id):
-            await self.__db.update_user_data(message.from_.id, data)
+        if await self.__db.user_exists(message.from_.id):
+            await self.__db.update_user(message.from_.id, data)
         else:
-            await self.__db.create_new_user(message.from_.id, data)
+            await self.__db.create_user(message.from_.id, data)
 
         return self.__base_ans(message.from_.id, self.__template_engine.render("data_saved.tfb"), self.__markups.all())
 
     async def show_data(self, message: Message) -> dict:
         """Асинхронное получение и отображение данных."""
-        if not await self.__db.user_in_table(message.from_.id):
+        if not await self.__db.user_exists(message.from_.id):
             return self.__unregistered(message.from_.id, self.__markups.change_data())
 
-        user_data: dict = await self.__db.get_user_data(message.from_.id)
-        return self.__base_ans(message.from_.id, self.__template_engine.render("user_data.tfd", user_data))
+        user: User = await self.__db.get_user(message.from_.id)
+        return self.__base_ans(message.from_.id, self.__template_engine.render("user_data.tfd", user.to_dict()))
 
     async def show_marks(self, message: Message) -> dict:
         """Асинхронное получение оценок."""
-        if not await self.__db.user_in_table(message.from_.id):
+        if not await self.__db.user_exists(message.from_.id):
             return self.__unregistered(message.from_.id)
 
-        user_data: dict = await self.__db.get_user_data(message.from_.id)
-        data: dict | bool = await self.__api.get_marks(user_data)
-
+        user: User = await self.__db.get_user(message.from_.id)
+        data: dict | bool = await self.__api.get_marks(user.to_dict())
         if not data:
             return self.__unregistered(message.from_.id)
 
@@ -125,11 +126,11 @@ class Controller(AbstractController):
 
     async def show_timetable(self, message: Message) -> dict:
         """Асинхронное получение расписания."""
-        if not await self.__db.user_in_table(message.from_.id):
+        if not await self.__db.user_exists(message.from_.id):
             return self.__unregistered(message.from_.id)
 
-        user_data: dict = await self.__db.get_user_data(message.from_.id)
-        data: dict | bool = await self.__api.get_timetable(user_data)
+        user: User = await self.__db.get_user(message.from_.id)
+        data: dict | bool = await self.__api.get_timetable(user.to_dict())
 
         if not data:
             return self.__unregistered(message.from_.id)

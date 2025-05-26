@@ -1,92 +1,119 @@
 """
-Асинхронный модуль для работы с PostgreSQL.
+Асинхронный модуль для работы с бд через SQLAlchemy
 """
 
-import abc
-from typing import Any, Callable, Dict, Optional
-import asyncpg
+from abc import ABC, abstractmethod
+from logging import error
+from typing import Any, Optional, Callable
+from sqlalchemy import CursorResult, Result, Select, Update, update, exists, select, exc
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio.engine import AsyncEngine
+from models.user import Base, User
 
 
-class AbstractDb(abc.ABC):
-    """Абстрактный базовый класс для асинхронной работы с базой данных."""
+class AbstractDb(ABC):
+    """Абстрактный базовый класс базы данных.
 
-    @abc.abstractmethod
-    async def create_data_table(self, connection: Optional[asyncpg.Connection] = None) -> None:
-        """Создает таблицу данных если она не существует."""
+    :param db_config: Словарь с данными для подключения к бд
+    """
 
-    @abc.abstractmethod
-    async def create_new_user(self, user_id: int, data: Dict, connection: Optional[asyncpg.Connection] = None) -> None:
-        """Добавляет нового пользователя в БД."""
+    @abstractmethod
+    def __init__(self, db_config: dict) -> None:
+        """Инициализация Abstract."""
 
-    @abc.abstractmethod
-    async def update_user_data(self, user_id: int, data: Dict, connection: Optional[asyncpg.Connection] = None) -> None:
-        """Обновляет данные существующего пользователя."""
+    @abstractmethod
+    async def create_tables(self) -> None:
+        """Создает все таблицы в базе данных"""
 
-    @abc.abstractmethod
-    async def user_in_table(self, user_id: int, connection: Optional[asyncpg.Connection] = None) -> bool:
-        """Проверяет наличие пользователя в БД."""
+    @abstractmethod
+    async def create_user(self, user_id: int, data: dict) -> None:
+        """Создает нового пользователя"""
 
-    @abc.abstractmethod
-    async def get_user_data(self, user_id: int, connection: Optional[asyncpg.Connection] = None) -> Dict:
-        """Возвращает данные пользователя в виде словаря."""
+    @abstractmethod
+    async def update_user(self, user_id: int, data: dict) -> bool:
+        """Обновляет данные пользователя, возвращает признак успеха"""
+
+    @abstractmethod
+    async def user_exists(self, user_id: int) -> bool:
+        """Проверяет существование пользователя"""
+
+    @abstractmethod
+    async def get_user(self, user_id: int) -> Optional[User]:
+        """Возвращает объект User или None"""
 
 
-class Db(AbstractDb):
-    """Асинхронная реализация работы с PostgreSQL."""
+class Database:
+    """Асинхронная реализация работы с PostgreSQL"""
 
-    def __init__(self, db_config: Dict) -> None:
-        self._db_config = db_config
-        self._columns = {
-            "id": "INTEGER PRIMARY KEY",
-            "password": "TEXT",
-            "login": "TEXT",
-            "person_id": "TEXT",
-            "school_id": "TEXT",
-            "group_id": "TEXT",
-            "cookies": "JSONB",
-        }
+    def __init__(self, db_config: dict) -> None:
+        self.engine: AsyncEngine = create_async_engine(
+            f"postgresql+asyncpg://{db_config['user']}:{db_config['password']}"
+            f"@{db_config['host']}:{db_config['port']}/{db_config['database']}",
+            pool_size=20,
+            max_overflow=10,
+            pool_recycle=3600,
+        )
 
-    async def _manage_connection(self, func: Callable, **kwargs) -> Any:
-        """Управляет подключением и транзакциями."""
-        conn = await asyncpg.connect(**self._db_config)
+        self.session_factory = async_sessionmaker(bind=self.engine, autoflush=False, expire_on_commit=False)
+
+    async def create_tables(self) -> None:
+        """Создает все таблицы в базе данных"""
+        async with self.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    async def __execute(self, operation: Callable, must_commit: bool = False) -> Any:
+        """Универсальный метод выполнения операций"""
+        session: AsyncSession = self.session_factory()
+
         try:
-            async with conn.transaction():
-                return await func(connection=conn, **kwargs)
+            result: Any = await operation(session)
+            if must_commit:
+                await session.commit()
+            return result
+        except exc.SQLAlchemyError as e:
+            await session.rollback()
+            error("Database error: %s", e)
         finally:
-            await conn.close()
+            await session.close()
 
-    async def create_data_table(self, connection: Optional[asyncpg.Connection] = None) -> None:
-        if not connection:
-            return await self._manage_connection(self.create_data_table)
+    async def create_user(self, user_id: int, data: dict) -> None:
+        """Создает нового пользователя"""
 
-        columns = ", ".join(f"{k} {v}" for k, v in self._columns.items())
-        await connection.execute(f"CREATE TABLE IF NOT EXISTS data ({columns})")
+        async def _operation(sess: AsyncSession) -> User:
+            user = User(id=user_id, **data)
+            sess.add(user)
+            await sess.flush()
 
-    async def create_new_user(self, user_id: int, data: Dict, connection: Optional[asyncpg.Connection] = None) -> None:
-        if not connection:
-            return await self._manage_connection(self.create_new_user, user_id=user_id, data=data)
+        return await self.__execute(_operation, True)
 
-        data["id"] = user_id
-        columns = ", ".join(data.keys())
-        values = ", ".join(f"${i+1}" for i in range(len(data)))
-        await connection.execute(f"INSERT INTO data ({columns}) VALUES ({values})", *data.values())
+    async def update_user(self, user_id: int, data: dict) -> bool:
+        """Обновляет данные пользователя, возвращает признак успеха"""
 
-    async def update_user_data(self, user_id: int, data: Dict, connection: Optional[asyncpg.Connection] = None) -> None:
-        if not connection:
-            return await self._manage_connection(self.update_user_data, user_id=user_id, data=data)
+        async def _operation(sess: AsyncSession) -> bool:
+            stmt: Update = (
+                update(User).where(User.id == user_id).values(**data).execution_options(synchronize_session="fetch")
+            )
+            result: CursorResult = await sess.execute(stmt)
+            return result.rowcount > 0
 
-        updates = ", ".join(f"{k} = ${i+1}" for i, k in enumerate(data))
-        await connection.execute(f"UPDATE data SET {updates} WHERE id = ${len(data)+1}", *data.values(), user_id)
+        return await self.__execute(_operation, True)
 
-    async def user_in_table(self, user_id: int, connection: Optional[asyncpg.Connection] = None) -> bool:
-        if not connection:
-            return await self._manage_connection(self.user_in_table, user_id=user_id)
+    async def user_exists(self, user_id: int) -> bool:
+        """Проверяет существование пользователя"""
 
-        return await connection.fetchval("SELECT EXISTS(SELECT 1 FROM data WHERE id = $1)", user_id)
+        async def _operation(sess: AsyncSession) -> bool:
+            query: Select = select(exists().where(User.id == user_id))
+            result: Result = await sess.execute(query)
+            return result.scalar()
 
-    async def get_user_data(self, user_id: int, connection: Optional[asyncpg.Connection] = None) -> Dict:
-        if not connection:
-            return await self._manage_connection(self.get_user_data, user_id=user_id)
+        return await self.__execute(_operation)
 
-        row = await connection.fetchrow(f"SELECT {', '.join(self._columns)} FROM data WHERE id = $1", user_id)
-        return dict(row) if row else {}
+    async def get_user(self, user_id: int) -> Optional[User]:
+        """Возвращает объект User или None"""
+
+        async def _operation(sess: AsyncSession) -> Optional[User]:
+            query: Select = select(User).where(User.id == user_id)
+            result: Result = await sess.execute(query)
+            return result.scalar_one_or_none()
+
+        return await self.__execute(_operation)

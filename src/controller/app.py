@@ -4,11 +4,11 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
+from uvicorn import run
 
 from utils.logger import Logger
 from src.async_controller import AbstractController, Controller
-from src.async_db import AbstractDb, Db
+from src.async_db import AbstractDb, Database
 from src.template_engine import AbstractTemplateEngine, TemplateEngine
 from src.async_api import AbstractApi, Api
 from src.markups import AbstractMarkups, Markups
@@ -46,8 +46,7 @@ def main() -> None:
         allow_headers=["*"],
     )
 
-    db: AbstractDb = Db(DB_DATA)
-    db.create_data_table()
+    db: AbstractDb = Database(DB_DATA)
     template_engine: AbstractTemplateEngine = TemplateEngine("templates")
     api: AbstractApi = Api(PARSER_IP)
     markups: AbstractMarkups = Markups()
@@ -57,7 +56,7 @@ def main() -> None:
     for router in routers:
         app.include_router(router.get_router())
 
-    uvicorn.run(app, host="0.0.0.0", port=8019)  # Изменить
+    run(app, host="0.0.0.0", port=8019)  # Изменить
 
 
 if __name__ == "__main__":

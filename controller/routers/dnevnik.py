@@ -4,19 +4,19 @@
 Предоставляет API-эндпоинты для:
 - Получения оценок
 - Получения расписания
-- Верификации данных и получения персональной информации
+- Проверки существования пользователя
+- Создания/обновления данных пользователя
 
 Основные компоненты:
     Router: Класс роутера, регистрирующий эндпоинты и обрабатывающий запросы.
 
 Зависимости:
     AbstractRouter: Абстрактный базовый класс для роутеров
-    AbstractParser: Абстракция для работы с парсером данных
-    Pydantic-модели: UserData, GetTimetable, GetMarks
+    AbstractApi, AbstractDb: Абстракции для работы с API и базой данных
+    Pydantic-модели: UserData, User, GetMarks, GetTimetable, UserExists, ChangeCreateData
 
 .. note::
     Все эндпоинты принимают данные в формате UserData через POST-запросы.
-    Для каждого эндпоинта автоматически генерируется документация FastAPI.
 """
 
 from typing import Callable, Optional
@@ -24,29 +24,35 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from routers.abstract import AbstractRouter
+from src.api import AbstractApi
+from src.db import AbstractDb
 from models.user_data import UserData
-from models.responses import GetTimetable, GetMarks
-from src.async_parser import AbstractParser
+from models.user import User
+from models.responses import GetMarks, GetTimetable, UserExists, ChangeCreateData
 
 
 class Router(AbstractRouter):
     """
     Реализация роутера для образовательных данных.
 
-    :param parser: Экземпляр парсера для получения данных
-    :type parser: AbstractParser
+    :param api: Экземпляр API для взаимодействия с внешним сервисом
+    :param db: Экземпляр базы данных для работы с хранилищем
+    :type api: AbstractApi
+    :type db: AbstractDb
     :returns: Инициализированный экземпляр роутера
     :rtype: Router
     """
 
-    def __init__(self, parser: AbstractParser) -> None:
-        self.__parser: AbstractParser = parser
+    def __init__(self, api: AbstractApi, db: AbstractDb) -> None:
         self.__router: APIRouter = APIRouter()
+        self.__api: AbstractApi = api
+        self.__db: AbstractDb = db
 
         self.__register_paths: dict = {
             "get_marks": self.__get_marks,
             "get_timetable": self.__get_timetable,
-            "verify_data_get_personal_data": self.__verify_data_get_personal_data,
+            "user_exists": self.__user_exists,
+            "change_create_data": self.__change_create_data,
         }
 
         self.__routs_register()
@@ -68,7 +74,7 @@ class Router(AbstractRouter):
         :type endpoint: Callable
         :meta private:
         """
-        self.__router.add_api_route(f"/{path}", endpoint, methods=["POST"], response_model=UserData)
+        self.__router.add_api_route(f"/{path}", endpoint, methods=["POST"])
 
     async def __get_marks(self, data: UserData) -> JSONResponse:
         """
@@ -80,8 +86,13 @@ class Router(AbstractRouter):
         :rtype: JSONResponse
         :meta private:
         """
-        content: GetMarks = GetMarks(marks=await self.__parser.get_marks(data))
-        return JSONResponse(content=content.model_dump())
+        user_data: Optional[User] = await self.__db.get_user(data)
+        if user_data is None:
+            return JSONResponse(content=GetMarks().model_dump())
+        content: Optional[GetMarks] = await self.__api.get_marks(UserData.model_validate(user_data))
+        if content is not None:
+            return JSONResponse(content=content.model_dump())
+        return JSONResponse(content=GetMarks().model_dump())
 
     async def __get_timetable(self, data: UserData) -> JSONResponse:
         """
@@ -93,22 +104,41 @@ class Router(AbstractRouter):
         :rtype: JSONResponse
         :meta private:
         """
-        content: GetTimetable = GetTimetable(timetable=await self.__parser.get_timetable(data))
-        return JSONResponse(content=content.model_dump())
+        user_data: Optional[User] = await self.__db.get_user(data)
+        if user_data is None:
+            return JSONResponse(content=GetTimetable().model_dump())
+        content: Optional[GetTimetable] = await self.__api.get_timetable(UserData.model_validate(user_data.to_dict()))
+        if content is not None:
+            return JSONResponse(content=content.model_dump())
+        return JSONResponse(content=GetTimetable().model_dump())
 
-    async def __verify_data_get_personal_data(self, data: UserData) -> JSONResponse:
+    async def __user_exists(self, data: UserData) -> JSONResponse:
         """
-        Обработчик верификации данных и получения персональной информации.
+        Обработчик проверки существования пользователя.
 
-        :param data: Данные пользователя для верификации
+        :param data: Данные пользователя для проверки
         :type data: UserData
-        :returns: Ответ с персональными данными в формате JSON
+        :returns: Ответ с результатом проверки в формате JSON
         :rtype: JSONResponse
         :meta private:
         """
-        content: Optional[UserData] = await self.__parser.get_cookies_person_school_group_id(data)
-        if content is None:
-            return JSONResponse(content=data.model_dump())
+        content: Optional[UserExists] = UserExists(user_exists=await self.__db.user_exists(data))
+        return JSONResponse(content=content.model_dump())
+
+    async def __change_create_data(self, data: UserData) -> JSONResponse:
+        """
+        Обработчик создания/обновления данных пользователя.
+
+        :param data: Данные пользователя для создания/обновления
+        :type data: UserData
+        :returns: Ответ с результатом операции в формате JSON
+        :rtype: JSONResponse
+        :meta private:
+        """
+        user_data: Optional[UserData] = await self.__api.verify_data_get_personal_data(data)
+        if user_data is None:
+            return JSONResponse(content=ChangeCreateData(success=False).model_dump())
+        content: ChangeCreateData = ChangeCreateData(success=await self.__db.create_update_user(user_data))
         return JSONResponse(content=content.model_dump())
 
     def get_router(self) -> APIRouter:

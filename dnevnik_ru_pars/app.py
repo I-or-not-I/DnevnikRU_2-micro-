@@ -9,7 +9,7 @@ from uvicorn import run
 from utils.logger import Logger
 from routers import abstract, base, dnevnik
 from src.async_parser import AbstractParser, Parser
-from config import LOGGING_LEVEL
+from config import LOGGING_LEVEL, HOST, PORT, TIMEOUT
 
 
 def main() -> None:
@@ -37,13 +37,13 @@ def main() -> None:
         allow_headers=["*"],
     )
 
-    parser: AbstractParser = Parser()
+    parser: AbstractParser = Parser(TIMEOUT)
 
-    routers: tuple[abstract.AbstractRouter] = (base.Router(), dnevnik.Router(parser))
+    routers: tuple[abstract.AbstractRouter, ...] = (base.Router(), dnevnik.Router(parser))
     for router in routers:
         app.include_router(router.get_router())
 
-    run(app, host="0.0.0.0", port=8022) 
+    run(app, host=HOST, port=PORT)
 
 
 if __name__ == "__main__":

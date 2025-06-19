@@ -1,3 +1,6 @@
 from logging import INFO
 
 LOGGING_LEVEL = INFO
+HOST = "127.0.0.1"
+PORT = 8001
+TIMEOUT = 10.0

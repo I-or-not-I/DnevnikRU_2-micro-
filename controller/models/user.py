@@ -4,9 +4,8 @@
 Модели основаны на SQLAlchemy.
 """
 
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.dialects.postgresql import JSONB
-import sqlalchemy as sa
+from sqlalchemy import JSON, Text, Integer
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -36,13 +35,13 @@ class User(Base):
 
     __tablename__: str = "data"
 
-    id: sa.Column = sa.Column(sa.Integer, primary_key=True)
-    password: sa.Column = sa.Column(sa.Text)
-    login: sa.Column = sa.Column(sa.Text)
-    person_id: sa.Column = sa.Column(sa.Text)
-    school_id: sa.Column = sa.Column(sa.Text)
-    group_id: sa.Column = sa.Column(sa.Text)
-    cookies: sa.Column = sa.Column(JSONB)
+    id: Mapped[Integer] = mapped_column("id", Integer, primary_key=True)
+    password: Mapped[Text] = mapped_column("password", type_=Text)
+    login: Mapped[Text] = mapped_column("login", type_=Text)
+    person_id: Mapped[Text] = mapped_column("person_id", type_=Text)
+    school_id: Mapped[Text] = mapped_column("school_id", type_=Text)
+    group_id: Mapped[Text] = mapped_column("group_id", type_=Text)
+    cookies: Mapped[JSON] = mapped_column("cookies", type_=JSON)
 
     def to_dict(self) -> dict:
         """Преобразует объект User в словарь для сериализации в JSON.

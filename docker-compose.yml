@@ -3,12 +3,16 @@ services:
   dnevnik_ru_pars:
     build: ./dnevnik_ru_pars
     ports:
-      - "8022:8022"
+      - "8001:8001"
   controller:
     build: ./controller
     ports:
-      - "8019:8019"
+      - "8000:8000"
     env_file: .env.controller 
+  tg_user_service:
+    build: ./tg_user_service
+    ports:
+      - "8003:8003"
   tg_bot:
     build: ./tg_bot
     env_file: .env.tg_bot 

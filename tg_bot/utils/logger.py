@@ -1,13 +1,13 @@
 import logging
-from typing import Self
+from typing import Self, Optional
 
 
 class Logger:
-    _instance = None
+    _instance: Optional[Self] = None
 
     def __new__(cls, level: int) -> Self:
         if not isinstance(cls._instance, cls):
-            cls._instance: Self = super().__new__(cls)
+            cls._instance: Optional[Self] = super().__new__(cls)
         return cls._instance
 
     def __init__(self, level: int) -> None:
